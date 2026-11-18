@@ -301,6 +301,11 @@ Treat about ±2 points as noise at these sizes (8 scrambles × 2 voices) and rea
 counts for the sounds a change targets, not just the total. One recogniser and one tune can't stand
 in for a native listener; the test says where to look and whether a change moved what it aimed at.
 
+**It is a screen for named confusions; the ear decides.** The recogniser and a native listener can
+disagree, and then the listener wins. #115 made Mandarin worse for the recogniser (scrambled 25.0 /
+27.8% → 37.8 / 39.7%, male / female) and better to a native speaker's ear, which preferred it in
+three of four comparisons.
+
 ## Not yet
 
 - **A language choice.** Routing by script can't tell Turkish or German from English, or Cantonese
