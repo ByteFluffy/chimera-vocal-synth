@@ -2885,3 +2885,20 @@ html.in-browser .resize-grip {
   min-width: 0;
   box-sizing: border-box;
 }
+
+/* ---------- the plugin's window doesn't scroll, and a 1120 x 800 window (LAYOUT_MIN) has no
+   room to spare for the larger labels: Play's six encoder tabs stay on one row (a second row
+   pushed the keys 7 px past the window), and Speak's consonant chart keeps the 15 px symbols in
+   shorter cells (its 22 px rows pushed the tube and folds 16 px past it) */
+.in-plugin .enc-tab {
+  padding: 4px 5px;
+  font-size: 11px;
+  letter-spacing: 0.02em;
+}
+.in-plugin .ipa-chart td {
+  height: 19px;
+}
+.in-plugin .ipa-chart button.ipa,
+.in-plugin .ipa-chart .ipa-empty {
+  height: 18px;
+}
