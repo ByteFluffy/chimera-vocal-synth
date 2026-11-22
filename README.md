@@ -35,7 +35,7 @@ for tests and the `chimera` CLI.
   9:16 clip to share. The keys sing the same words a syllable at a time, legato or not, onto a
   pitch roll; consonants land before the beat. Lyrics can be English, Turkish (chosen with EN/TR:
   Latin script can't tell them apart), Korean (Hangul: one block per note, with Korean sound
-  rules) or Russian; each language is a front end
+  rules), Japanese (kana, one mora per note) or Russian; each language is a front end
   ([docs/language-front-ends.md](docs/language-front-ends.md)).
 - **Beatbox**: pads and a step sequencer, every drum an articulatory gesture.
 - **Bestiary**: songbird (two-voice syrinx), seal, alligator and elephant.
