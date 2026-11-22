@@ -40,7 +40,7 @@
   --white: #eef6f8;
   --amber: #ffb340;
   --glow-blue: 0 0 1.5px rgba(79, 182, 242, 0.9), 0 0 6px rgba(79, 182, 242, 0.4);
-  /* text inks (mockups/label-legibility.html): --blue-dim, --blue-mid and --frame are for lines,
+  /* text inks (docs/ui-redesign.md → Type): --blue-dim, --blue-mid and --frame are for lines,
      never text. --ink is values, titles and the active state; --label is names, units and ticks;
      --label-quiet is subtitles and hints. All at least 10:1 on black. */
   --ink: #eaf7ff;

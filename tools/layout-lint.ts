@@ -13,7 +13,7 @@
  *  - screens     two screens, or a screen and the top bar, overlapping
  *  - canvas-edge canvas text running off its canvas
  *  - h-scroll    the page scrolls sideways
- *  - small-text  text under 11 px, DOM or canvas (the label floor: mockups/label-legibility.html)
+ *  - small-text  text under 11 px, DOM or canvas (the label floor: docs/ui-redesign.md → Type)
  *
  * Opt-outs, for things meant to sit on top of other things:
  *  - data-layout="overlay" on an element: it and its contents are exempt from overlap checks
