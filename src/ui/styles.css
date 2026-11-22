@@ -41,14 +41,12 @@
   --amber: #ffb340;
   --glow-blue: 0 0 1.5px rgba(79, 182, 242, 0.9), 0 0 6px rgba(79, 182, 242, 0.4);
   /* text inks (docs/ui-redesign.md → Type): --blue-dim, --blue-mid and --frame are for lines,
-     never text. --ink is values, titles and the active state; --label is names, units and ticks;
-     --label-quiet is subtitles and hints. All at least 10:1 on black. */
+     never text. --ink is values, titles and the active state; --label is names and ticks;
+     --label-quiet is subtitles and hints (10:1 or more on black); --blue (9:1) stays for chrome. */
   --ink: #eaf7ff;
   --label: #a9dcf8;
   --label-quiet: #7cbfe6;
   --line-strong: #2a6a95;
-  /* text over a drawing: a black halo so traces never cut through it */
-  --halo: 0 0 2px #000, 0 0 3px #000, 0 0 5px #000;
   /* older names, remapped so screens not yet redrawn sit on black in blue and amber */
   --black: #000000;
   --console: #000000;
@@ -1727,8 +1725,8 @@ button.primary.large {
 
 .enc-unit {
   font-size: 12px;
-  letter-spacing: 0.02em;
-  color: var(--label);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
   white-space: nowrap;
 }
 

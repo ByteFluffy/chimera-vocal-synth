@@ -12,8 +12,8 @@ The approved mockups are in `docs/mockups/` (open `index.html`). This plan says 
   Labels are set to be read at a glance:
   - Medium weight (500) below 20 px. Weight 400 falls in the Light face's range, a hairline at label sizes.
   - At least 11 px, DOM or canvas: labels and ticks 11–12 px, screen titles and mode tabs 13 px. `tools/layout-lint.ts` fails smaller text, and `label()` in `src/ui/render/vector.ts` floors canvas text at `LABEL_MIN`.
-  - Text never uses the line colours (`--blue-dim`, `--blue-mid`, `--frame`). `--ink` is for values, titles and the lit state, `--label` for names, units and ticks, `--label-quiet` for subtitles and hints; each is at least 10:1 on black.
-  - Tracking 0.06–0.1em on small caps, no opacity on text, and canvas text on a black halo so traces never cut through it.
+  - Text never uses the line colours (`--blue-dim`, `--blue-mid`, `--frame`). `--ink` is for values, titles and the lit state, `--label` for names and ticks, `--label-quiet` for subtitles and hints (each 10:1 or more on black); `--blue` (9:1) stays for chrome, and a control's own colour for its name and unit.
+  - Tracking 0.06–0.12em on small caps. Dim text by colour, not opacity (alpha only for text fading in or out). Canvas text sits on a thin black halo so traces never cut through it.
 - **Layout.** A wall of screens: a tall left screen (the face, or the creature) and a right column of instrument screens that changes per mode.
 - **Anatomy.** Outlines from the engine's geometry; the airway's cross-section lines lit by pressure; airflow streaks; turbulence dots; fading afterglow of the tongue, jaw and lips; four big slot readouts under the chin.
 

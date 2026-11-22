@@ -51,8 +51,9 @@ and the CLI) under a React UI. See the README.
 - **The wasm loads before the UI.** A module that calls the engine at import must not be reachable
   from `src/main.tsx`'s static imports. Check: `bun tools/e2e.ts` against `bun run preview`.
 - **DOM content flows in `.screen-body`, never absolutely positioned.** Check: `bun run lint:layout`.
-- **Text is readable: Hershey Medium, 11 px or larger, in `--ink`/`--label`, never a line colour or
-  opacity** (`docs/ui-redesign.md` → Type). Check: `bun run lint:layout` fails text under 11 px.
+- **Text is readable: Hershey Medium, 11 px or larger, never in a line colour (`--blue-dim`,
+  `--blue-mid`, `--frame`) or dimmed by opacity** (`docs/ui-redesign.md` → Type). Check:
+  `bun run lint:layout` fails text under 11 px.
 - **Nothing copyrighted goes in git.** `public/shows/` is gitignored; never ship CSD audio or
   anything derived from it.
 - **Voice tuning follows `docs/hill-climb/README.md`** and never edits its judges.

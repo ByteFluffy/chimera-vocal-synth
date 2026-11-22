@@ -15,8 +15,8 @@ export const HERSHEY = '"Hershey", "Archivo", system-ui, sans-serif';
  * Canvas font. Hershey Light is a hairline at label sizes, so it is used only for display sizes
  * (20 px and up); smaller text is always Medium.
  */
-export const hfont = (size: number, weight: "l" | "m" = "l") => `${weight === "m" || size < LIGHT_MIN ? 500 : 300} ${size}px ${HERSHEY}`;
 const LIGHT_MIN = 20;
+export const hfont = (size: number, weight: "l" | "m" = "l") => `${weight === "m" || size < LIGHT_MIN ? 500 : 300} ${size}px ${HERSHEY}`;
 
 /** the smallest canvas text, matching the 11 px floor in styles.css (tools/layout-lint.ts checks it) */
 export const LABEL_MIN = 11;
@@ -135,7 +135,8 @@ export interface LabelOpts {
 /**
  * Hershey text (pass capitals for chrome-style labels). Every label is readable whatever the
  * caller asks: at least LABEL_MIN, Medium below display sizes, tight tracking, never in a line
- * colour, solid (alpha applies only to moving text), on a black halo so traces never cut it.
+ * colour, on a black halo so traces never cut it. Dim text by colour (TEXT.label, TEXT.quiet);
+ * alpha is for text fading in or out.
  */
 export function label(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, o: LabelOpts = {}): void {
   const size = labelSize(o);
@@ -144,10 +145,10 @@ export function label(ctx: CanvasRenderingContext2D, text: string, x: number, y:
   if (hasLetterSpacing) (ctx as CanvasRenderingContext2D & { letterSpacing: string }).letterSpacing = `${labelTracking(o, size).toFixed(2)}px`;
   ctx.textAlign = o.align ?? "left";
   ctx.textBaseline = o.baseline ?? "alphabetic";
-  ctx.globalAlpha = o.moving ? o.alpha ?? 1 : 1;
+  ctx.globalAlpha = o.alpha ?? 1;
   ctx.globalCompositeOperation = "source-over";
   ctx.strokeStyle = "#000";
-  ctx.lineWidth = Math.max(3, size * 0.22);
+  ctx.lineWidth = Math.min(4, Math.max(3, size * 0.22)); // a thin outline, not a hole cut in the drawing
   ctx.lineJoin = "round";
   ctx.strokeText(text, x, y);
   ctx.globalCompositeOperation = "lighter";
