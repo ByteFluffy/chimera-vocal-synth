@@ -14,6 +14,7 @@
  *  - canvas-edge canvas text running off its canvas
  *  - h-scroll    the page scrolls sideways
  *  - small-text  text under 11 px, DOM or canvas (the label floor: docs/ui-redesign.md → Type)
+ *  - stale       (warning) a canvas still showing a frame drawn for another size, so its text went unchecked
  *
  * Opt-outs, for things meant to sit on top of other things:
  *  - data-layout="overlay" on an element: it and its contents are exempt from overlap checks
@@ -156,6 +157,11 @@ function inspect(): Problem[] {
       if (!canvas.isConnected || !visible(canvas)) continue;
       const cb = canvas.getBoundingClientRect();
       if (cb.width < 2 || cb.height < 2) continue;
+      // still a frame drawn for another size (a layout change the canvas hasn't redrawn for yet)
+      if (!(window as unknown as { __canvasFresh: (c: HTMLCanvasElement) => boolean }).__canvasFresh(canvas)) {
+        problems.push({ kind: "stale", detail: `${where(canvas)} hadn't redrawn at its new size; its text wasn't checked`, warn: true });
+        continue;
+      }
       const sx = cb.width / canvas.width, sy = cb.height / canvas.height;
       const scatter = canvas.closest('[data-layout="scatter"]') !== null;
       for (const t of items) {
@@ -226,6 +232,17 @@ function hookCanvasText() {
   type Item = { text: string; x0: number; y0: number; x1: number; y1: number; size: number };
   const log = new Map<HTMLCanvasElement, Item[]>();
   (window as unknown as { __canvasText: typeof log }).__canvasText = log;
+  // each canvas's backing size when its current frame began: text recorded in a frame drawn before
+  // a resize is measured against a box it wasn't drawn for, so checks wait for a fresh frame
+  const frames = new Map<HTMLCanvasElement, [number, number]>();
+  const fresh = (c: HTMLCanvasElement): boolean => {
+    const b = c.getBoundingClientRect();
+    if (b.width < 2 || b.height < 2) return true;
+    const f = frames.get(c);
+    const sx = b.width / c.width, sy = b.height / c.height;
+    return (!f || (f[0] === c.width && f[1] === c.height)) && Math.abs(sx - sy) <= 0.01 * Math.max(sx, sy);
+  };
+  Object.assign(window, { __canvasFresh: fresh, __canvasesFresh: () => [...log.keys()].every((c) => !c.isConnected || fresh(c)) });
   const P = CanvasRenderingContext2D.prototype;
   for (const name of ["fillRect", "clearRect"] as const) {
     const orig = P[name];
@@ -234,7 +251,10 @@ function hookCanvasText() {
       const t = this.getTransform(), c = this.canvas;
       const x0 = Math.min(t.a * x, t.a * (x + w)) + t.e, y0 = Math.min(t.d * y, t.d * (y + h)) + t.f;
       const x1 = Math.max(t.a * x, t.a * (x + w)) + t.e, y1 = Math.max(t.d * y, t.d * (y + h)) + t.f;
-      if (x0 <= 0 && y0 <= 0 && x1 >= c.width && y1 >= c.height) log.set(c as HTMLCanvasElement, []);
+      if (x0 <= 0 && y0 <= 0 && x1 >= c.width && y1 >= c.height) {
+        log.set(c as HTMLCanvasElement, []);
+        frames.set(c as HTMLCanvasElement, [c.width, c.height]);
+      }
     };
   }
   const fill = P.fillText;
@@ -308,6 +328,8 @@ async function main() {
     const check = async (state: string, wait = 350) => {
       await page.evaluate(() => document.fonts.ready);
       await page.waitForTimeout(wait);
+      // a busy machine can be frames behind: give every canvas the chance to redraw at its size
+      await page.waitForFunction(() => (window as unknown as { __canvasesFresh: () => boolean }).__canvasesFresh(), undefined, { timeout: 3000, polling: 50 }).catch(() => {});
       views++;
       const problems = (await page.evaluate(inspect)) as Problem[];
       // a plugin's window doesn't scroll: what's below the fold might as well not be there

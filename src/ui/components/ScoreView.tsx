@@ -120,7 +120,7 @@ export function ScoreView() {
       tri.lineTo(x, top - 3);
       tri.closePath();
       beam(ctx, tri, V.white, 1.1);
-      label(ctx, `${Math.max(0, now).toFixed(2)} S`, x + 8, top - 4, { size: LABEL_MIN, color: V.white, ls: 0.12, alpha: 0.8 });
+      label(ctx, `${Math.max(0, now).toFixed(2)} S`, x + 8, top - 4, { size: LABEL_MIN, color: mix(V.white, "#000000", 0.2), ls: 0.12 });
     }
   });
   return <canvas ref={ref} className="score-canvas" aria-label="Gestural score of the current utterance: which articulator moves, when, and how they overlap" role="img" />;
