@@ -2196,7 +2196,8 @@ input[type="range"]::-moz-range-thumb {
 }
 
 .syl.sung {
-  color: var(--label);
+  /* sung syllables stay visibly behind the upcoming ones (1.9:1 against --text) */
+  color: var(--label-quiet);
   border-color: rgba(19, 57, 84, 0.6);
 }
 
