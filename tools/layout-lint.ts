@@ -13,7 +13,7 @@
  *  - screens     two screens, or a screen and the top bar, overlapping
  *  - canvas-edge canvas text running off its canvas
  *  - h-scroll    the page scrolls sideways
- *  - small-text  DOM text under 8 px or canvas text under 7 px
+ *  - small-text  text under 11 px, DOM or canvas (the label floor: mockups/label-legibility.html)
  *
  * Opt-outs, for things meant to sit on top of other things:
  *  - data-layout="overlay" on an element: it and its contents are exempt from overlap checks
@@ -74,6 +74,7 @@ function inspect(): Problem[] {
   type R = { x0: number; y0: number; x1: number; y1: number };
   type Atom = { el: Element; r: R; name: string; overlay: boolean; canvas?: HTMLCanvasElement; scatter?: boolean };
   const TOL = 1.5;
+  const MIN_TEXT = 11; // px: the label floor (styles.css, LABEL_MIN in src/ui/render/vector.ts)
   const problems: Problem[] = [];
   const rect = (b: DOMRect): R => ({ x0: b.left, y0: b.top, x1: b.right, y1: b.bottom });
   const meet = (a: R, b: R): R => ({ x0: Math.max(a.x0, b.x0), y0: Math.max(a.y0, b.y0), x1: Math.min(a.x1, b.x1), y1: Math.min(a.y1, b.y1) });
@@ -128,7 +129,7 @@ function inspect(): Problem[] {
     if (!el || !text.trim() || !visible(el) || el.closest("script,style,option")) continue;
     if (el.closest("textarea")) continue; // the textarea itself is the box
     const size = parseFloat(getComputedStyle(el).fontSize);
-    if (size < 8) problems.push({ kind: "small-text", detail: `${nameOf(el, text)} is ${size}px` });
+    if (size < MIN_TEXT) problems.push({ kind: "small-text", detail: `${nameOf(el, text)} is ${size}px` });
     const range = document.createRange();
     range.selectNodeContents(n);
     const own = rect(el.getBoundingClientRect());
@@ -160,7 +161,7 @@ function inspect(): Problem[] {
       for (const t of items) {
         const r: R = { x0: cb.left + t.x0 * sx, y0: cb.top + t.y0 * sy, x1: cb.left + t.x1 * sx, y1: cb.top + t.y1 * sy };
         const name = `canvas text "${t.text.slice(0, 40)}" in ${where(canvas)}`;
-        if (t.size * sy < 7) problems.push({ kind: "small-text", detail: `${name} is ${(t.size * sy).toFixed(1)}px` });
+        if (t.size * sy < MIN_TEXT - 0.05) problems.push({ kind: "small-text", detail: `${name} is ${(t.size * sy).toFixed(1)}px` });
         const inside = meet(r, rect(cb));
         if (w(r) - w(inside) > 2 || h(r) - h(inside) > 2) problems.push({ kind: "canvas-edge", detail: `${name} ${fmt(r)} runs off its canvas ${fmt(rect(cb))}` });
         consider(canvas, inside, name, { canvas, scatter });

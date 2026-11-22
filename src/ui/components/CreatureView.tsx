@@ -5,7 +5,7 @@ import { creatureById } from "../../wasm/engine.ts";
 import type { CreatureDef } from "../../wasm/types.ts";
 import { liveTelemetry, previewTelemetry } from "../creatureLive.ts";
 import { TEXT, V, SLOTS, heat, pressureLevel } from "../colors.ts";
-import { beamPts, dot, hfont, label, labelWidth, ring, seg, wrapLabel, type Pt } from "../render/vector.ts";
+import { beamPts, dot, hfont, label, LABEL_MIN, labelWidth, ring, seg, wrapLabel, type Pt } from "../render/vector.ts";
 
 type P = [number, number];
 
@@ -174,7 +174,7 @@ export function CreatureView() {
 
     if (st.view.calipers) {
       // place labels, nudging down past any earlier label they would overlap
-      ctx.font = hfont(10);
+      ctx.font = hfont(LABEL_MIN);
       const placed: { x0: number; x1: number; y0: number; y1: number }[] = [];
       for (const l of labels) {
         const tw = ctx.measureText(l.text).width + l.text.length * 1.5;
