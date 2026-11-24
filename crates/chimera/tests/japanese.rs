@@ -278,7 +278,9 @@ fn other_languages_read_exactly_as_before() {
     let mut lex = MandarinLexicon::new();
     lex.load(LEX);
     let g = EnglishG2P::new();
-    for text in ["twinkle twinkle little star, how I wonder", "빵야 좋다 먹어, 국물", "молоко́ в лесу́ я́блоко", "nǐhǎo xièxie, café", "你好 我爱你, hello 빵야 nǐhǎo", "Zürich über ~ star - are"] {
+    // "в ｰ лесу́": review of #148, a stray half-width ｰ started a Japanese word with no notes and the
+    // router gave лесу́ the в's place
+    for text in ["twinkle twinkle little star, how I wonder", "빵야 좋다 먹어, 국물", "молоко́ в лесу́ я́блоко", "nǐhǎo xièxie, café", "你好 我爱你, hello 빵야 nǐhǎo", "Zürich über ~ star - are", "в ｰ лесу́", "hello ｰ star"] {
         let before = read_lyrics(text, &[&Pinyin, &English(&g), &Korean, &Russian, &Mandarin(&lex)]);
         assert_eq!(lyrics_to_syllables_with(text, &g, &lex), before, "{text}");
     }
@@ -434,4 +436,37 @@ fn the_demo_song_has_a_note_per_mora_and_sings_on_both_bodies() {
             j.join().unwrap();
         }
     });
+}
+
+#[test]
+fn a_half_width_long_mark_continues_a_word_and_never_starts_one() {
+    // review of #148: `в ｰ лесу́` sang ле су́, the в gone
+    assert!(!Japanese.starts('\u{FF70}') && Japanese.continues('\u{FF70}'));
+    // (the Russian front end sings a vowelless preposition with the word after it, as on main)
+    assert_eq!(shown("в ｰ лесу́"), shown("в лесу́"));
+    assert_eq!(shown("в ｰ лесу́"), ["в ле", "су́"]);
+    // inside a word it still holds the vowel, as ー does
+    assert_eq!(sung("ｺｰﾋｰ"), sung("コーヒー"));
+}
+
+#[test]
+fn a_voiced_wa_row_kana_reads_alike_however_it_is_typed() {
+    // review of #148: ヷ sang [v], ﾜﾞ and ワ + U+3099 sang [w]
+    for (pre, half, combining, ipa) in [("ヷ", "ﾜﾞ", "ワ\u{3099}", "va"), ("ヺ", "ｦﾞ", "ヲ\u{3099}", "vo"), ("ヸ", "ヸ", "ヰ\u{3099}", "vi"), ("ヹ", "ヹ", "ヱ\u{3099}", "ve")] {
+        assert_eq!(sung(pre), ipa, "{pre}");
+        assert_eq!(sung(half), ipa, "{half}");
+        assert_eq!(sung(combining), ipa, "{combining}");
+    }
+    // the hiragana and the spacing mark ゛ too, and the text keeps what was typed
+    assert_eq!(sung("わ゛"), "va");
+    assert_eq!(shown("ﾜﾞｲﾝ"), ["ﾜﾞ", "ｲ", "ﾝ"]);
+}
+
+#[test]
+fn half_width_punctuation_ends_phrases_as_the_full_width_does() {
+    // review of #148: ｻｸﾗ､ｻｸﾗ｡ gave no phrase end
+    let ends = |t: &str| syls(t).iter().map(|s| s.phrase_end).collect::<Vec<_>>();
+    assert_eq!(ends("ｻｸﾗ､ｻｸﾗ｡"), ends("サクラ、サクラ。"));
+    assert_eq!(ends("ｻｸﾗ､ｻｸﾗ｡").iter().filter(|e| **e).count(), 2);
+    assert_eq!(sung("ｻｸﾗ､ｻｸﾗ｡"), sung("サクラ、サクラ。"));
 }

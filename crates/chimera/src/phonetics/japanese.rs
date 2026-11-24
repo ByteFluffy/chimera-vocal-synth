@@ -70,6 +70,18 @@ fn voiced(c: char) -> Option<char> {
     char::from_u32(v)
 }
 
+/// The small vowel after ゔ in the voiced form of わ ゐ ゑ を (ヷ ヸ ヹ ヺ, or the kana and a voicing
+/// mark: [va] [vi] [ve] [vo]), or None.
+fn voiced_w(c: char) -> Option<char> {
+    match c {
+        'わ' => Some('ぁ'),
+        'ゐ' => Some('ぃ'),
+        'ゑ' => Some('ぇ'),
+        'を' => Some('ぉ'),
+        _ => None,
+    }
+}
+
 /// A kana's half-voiced form (は → ぱ), or None.
 fn semivoiced(c: char) -> Option<char> {
     let u = c as u32;
@@ -90,12 +102,20 @@ fn normalise(word: &str) -> Vec<Kana> {
         let u = full as u32;
         match ch {
             '\u{3099}' | '\u{309B}' | '\u{FF9E}' | '\u{309A}' | '\u{309C}' | '\u{FF9F}' => {
+                let semi = matches!(ch, '\u{309A}' | '\u{309C}' | '\u{FF9F}');
+                let mut small = None;
                 if let Some(last) = out.last_mut() {
-                    let semi = matches!(ch, '\u{309A}' | '\u{309C}' | '\u{FF9F}');
                     if let Some(v) = if semi { semivoiced(last.0) } else { voiced(last.0) } {
                         last.0 = v;
+                    } else if let (false, Some(vowel)) = (semi, voiced_w(last.0)) {
+                        // ﾜﾞ and ワ + U+3099 read as ヷ does
+                        last.0 = 'ゔ';
+                        small = Some(vowel);
                     }
                     last.1.push(ch);
+                }
+                if let Some(vowel) = small {
+                    out.push((vowel, String::new()));
                 }
             }
             '\u{309D}' | '\u{30FD}' | '\u{309E}' | '\u{30FE}' => {
@@ -104,10 +124,11 @@ fn normalise(word: &str) -> Vec<Kana> {
                     out.push((c, ch.to_string()));
                 }
             }
-            // ヷ ヸ ヹ ヺ: v + a small vowel
+            // ヷ ヸ ヹ ヺ: v + a small vowel, the reading of わ ゐ ゑ を with a voicing mark
             '\u{30F7}'..='\u{30FA}' => {
+                let vowel = voiced_w(['わ', 'ゐ', 'ゑ', 'を'][(u - 0x30F7) as usize]).unwrap_or('ぁ');
                 out.push(('ゔ', ch.to_string()));
-                out.push((['ぁ', 'ぃ', 'ぇ', 'ぉ'][(u - 0x30F7) as usize], String::new()));
+                out.push((vowel, String::new()));
             }
             // 〜 and ～ hold a vowel like ー
             '\u{301C}' | '\u{FF5E}' => out.push(('ー', ch.to_string())),
@@ -432,7 +453,10 @@ pub struct Japanese;
 
 impl FrontEnd for Japanese {
     fn starts(&self, c: char) -> bool {
-        is_kana(c)
+        // the half-width long-vowel mark ｰ sits among the half-width kana, but like ー it only
+        // continues a word: a stray one started a word that gave no notes, and the next word was
+        // read in its place ("в ｰ лесу́" lost the в)
+        is_kana(c) && c != '\u{FF70}'
     }
     fn continues(&self, c: char) -> bool {
         is_kana(c) || is_mark(c)

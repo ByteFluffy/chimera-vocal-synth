@@ -106,8 +106,8 @@ too many. To hold a mora where the tune does, type ー (or the router's `~`, spa
 
 - **ん** is a hum on [m] before p b m, [n] before t d n ts z ɾ tɕ dʑ ɲ, and [ŋ] before k g, a
   vowel, a glide, a fricative and at the end of a word (one of the three nasals the planner closes
-  a rhyme onto), the note's nucleus for the whole note: the one place this front end writes a
-  consonant as a nucleus. The planner times and voices a nasal over the note's length like a
+  a rhyme onto), the note's nucleus for the whole note: with っ's silent [ʔ] (below), one of the
+  two places this front end writes a consonant as a nucleus. The planner times and voices a nasal over the note's length like a
   vowel, and the rest (the app's fitting, the live keys) only copy a nucleus. The note before
   closes into it the way a Mandarin rhyme closes onto its coda (`closing`): a short coda of the same
   nasal, the vowel nasalised over its last 60 %, so かん on two notes is [kãŋ] [ŋ], one movement.
@@ -121,7 +121,7 @@ too many. To hold a mora where the tune does, type ー (or the router's `~`, spa
   the note is shorter). As no note, with the consonant twice its length (150 ms of closure), it was
   not heard as a geminate inside a sung note: a listener called it wrong and the recogniser read
   がっこう as 過去. Before a vowel, a glide, a tap, ん or the end of a word (あっ!) a glottal stop
-  cuts the note before and is held, silent, through っ's own note; at the start of a word there is
+  cuts the note before and is held, silent, through っ's own note as its nucleus; at the start of a word there is
   no note to go on from and it is dropped.
 - **Consonants:** し [ɕ], ち [tɕ], つ [ts], ふ [ɸ], ひ [ç], じ ぢ [dʑ], ず づ [z], に [ɲ], the ら行 a
   tap [ɾ]. The ざ行 is the affricate [dz] at the start of a word and after ん, [z] between vowels.
