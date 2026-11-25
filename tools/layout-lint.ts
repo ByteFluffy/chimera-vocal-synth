@@ -13,7 +13,11 @@
  *  - screens     two screens, or a screen and the top bar, overlapping
  *  - canvas-edge canvas text running off its canvas
  *  - h-scroll    the page scrolls sideways
+ *  - page-scroll the page scrolls down in a window it must fit: the plugin's windows, and a desktop
+ *                window (`fit`) as tall as Play needs, which Sing and Beatbox once overflowed
  *  - small-text  text under 11 px, DOM or canvas (the label floor: docs/ui-redesign.md → Type)
+ *  - shift       an encoder's readout moving as the encoder turns (each is turned to its ends)
+ *  - order       on a phone, a screen you touch below one you only watch (`<Screen watch>`)
  *  - stale       (warning) a canvas still showing a frame drawn for another size, so its text went unchecked
  *
  * Opt-outs, for things meant to sit on top of other things:
@@ -39,13 +43,17 @@ const arg = (name: string) => {
   return i > 0 ? process.argv[i + 1] : undefined;
 };
 
-export const VIEWPORTS: { w: number; h: number }[] = [
+export const VIEWPORTS: { w: number; h: number; fit?: boolean }[] = [
   { w: 375, h: 812 }, // phone
   { w: 768, h: 1024 }, // tablet, portrait
   { w: 1024, h: 768 }, // tablet, landscape; small laptop
   { w: 1280, h: 720 },
   { w: 1366, h: 768 },
   { w: 1440, h: 900 },
+  // every tab fits a window Play fits (805 px at this width): Beatbox needed 893 and Sing 811.
+  // Speak's short Tube and Vocal folds drew 11 px labels at 10.9 here (canvases scaled by dpr, not
+  // by their rounded backing store).
+  { w: 1728, h: 808, fit: true },
   { w: 1920, h: 1080 },
   { w: 2560, h: 1440 },
 ];
@@ -218,6 +226,17 @@ function inspect(): Problem[] {
     }
   }
 
+  // on a phone, what you touch comes before what you only watch: no screen under a `watch` one
+  // (the phone layout: styles.css, max-width 640px)
+  if (window.innerWidth <= 640) {
+    const column = [...document.querySelectorAll(".wall > .right > .screen")].filter(visible).sort((a, b) => a.getBoundingClientRect().top - b.getBoundingClientRect().top);
+    let watched: Element | undefined;
+    for (const s of column) {
+      if (s.classList.contains("watch")) watched ??= s;
+      else if (watched) problems.push({ kind: "order", detail: `${s.getAttribute("aria-label")} sits below ${watched.getAttribute("aria-label")}, which only shows: on a phone the screens you touch come first` });
+    }
+  }
+
   const sw = document.documentElement.scrollWidth;
   if (sw > window.innerWidth + 1) problems.push({ kind: "h-scroll", detail: `the page is ${sw}px wide in a ${window.innerWidth}px window` });
   return problems;
@@ -318,7 +337,7 @@ async function main() {
   const gl = process.platform === "darwin" ? ["--use-angle=metal", "--ignore-gpu-blocklist"] : ["--use-angle=swiftshader", "--enable-unsafe-swiftshader"];
   const browser = await chromium.launch({ headless: true, args: ["--autoplay-policy=no-user-gesture-required", ...gl] });
   let errors = 0, warnings = 0, views = 0;
-  for (const { w, h } of viewports) {
+  for (const { w, h, fit } of viewports as { w: number; h: number; fit?: boolean }[]) {
     const page = await browser.newPage({ viewport: { width: w, height: h }, deviceScaleFactor: 1 });
     await page.addInitScript(hookCanvasText);
     page.on("pageerror", (e) => {
@@ -333,7 +352,7 @@ async function main() {
       views++;
       const problems = (await page.evaluate(inspect)) as Problem[];
       // a plugin's window doesn't scroll: what's below the fold might as well not be there
-      if (plugin) {
+      if (plugin || fit) {
         const over = await page.evaluate(() => document.documentElement.scrollHeight - innerHeight);
         if (over > 0) problems.push({ kind: "page-scroll", detail: `${over}px taller than the window` });
       }
@@ -346,12 +365,51 @@ async function main() {
       if (errs.length) await page.screenshot({ path: `${out}/${w}x${h}-${state.replace(/[^a-z0-9]+/gi, "-")}.png`, fullPage: true });
     };
     const mode = (m: string) => page.getByRole("radio", { name: new RegExp(`^${m}$`, "i") }).click();
+    // every encoder shown, turned to each end and back: its readout must not move (a "0" turned to
+    // "+1" once dropped the unit to a second line, and the screen under it jumped)
+    const steady = async (state: string) => {
+      const moved = (await page.evaluate(async () => {
+        const frame = () => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+        const set = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!;
+        const turn = (input: HTMLInputElement, v: string) => {
+          set.call(input, v);
+          input.dispatchEvent(new Event("input", { bubbles: true }));
+        };
+        const out: string[] = [];
+        for (const input of document.querySelectorAll<HTMLInputElement>(".enc-input")) {
+          const enc = input.closest(".encoder")!;
+          if (!enc.checkVisibility()) continue;
+          const box = () => {
+            const b = enc.querySelector(".enc-readout")!.getBoundingClientRect();
+            const u = enc.querySelector(".enc-unit")?.getBoundingClientRect();
+            return [b.left, b.top, b.width, b.height, u?.left ?? 0, u?.top ?? 0].map((v) => Math.round(v * 2) / 2).join(",");
+          };
+          const was = input.value, at = box();
+          for (const end of [input.min, input.max]) {
+            turn(input, end);
+            await frame();
+            const now = box();
+            if (now !== at) out.push(`${enc.querySelector(".enc-label")?.textContent} at ${end === input.min ? "min" : "max"} "${(enc.querySelector(".enc-readout") as HTMLElement).innerText}": readout [${at}] became [${now}]`);
+          }
+          turn(input, was);
+          await frame();
+        }
+        return out;
+      })) as string[];
+      if (!moved.length) return;
+      errors += moved.length;
+      console.log(`\n${w}x${h} ${state}: ${moved.length} error(s)`);
+      for (const m of moved) console.log(`  ERROR ${"shift".padEnd(11)} ${m}`);
+    };
     // every encoder page of the screens on the right (each page has its own labels)
     const pages = async (state: string) => {
+      await steady(state);
       const tabs = page.locator(".right .enc-tab");
       for (let i = 1; i < (await tabs.count()); i++) {
         await tabs.nth(i).click();
-        await check(`${state}, controls page ${(await tabs.nth(i).textContent())?.trim()}`);
+        const name = `${state}, controls page ${(await tabs.nth(i).textContent())?.trim()}`;
+        await check(name);
+        await steady(name);
       }
       if (await tabs.count()) await tabs.first().click();
     };

@@ -60,7 +60,7 @@ because the host asks the size before there's a window.
 
 The editor is the page in the user's web browser. Opening the plugin's window in the DAW starts a
 small server on 127.0.0.1 and opens its address with `xdg-open`, and closing the window stops it; the
-page then says it has no answer. The DAW's own window for the plugin stays small and empty. That's
+page then says it has no answer. The DAW's own window for the plugin stays small. That's
 `src/browser.rs`, and `src/http.rs`, which `examples/ui_harness.rs` serves the page with too.
 
 A webview inside the DAW's window would be WebKitGTK, which needs GTK running on its thread. The host's
@@ -70,6 +70,12 @@ process could embed WebKitGTK in the DAW's window by its X11 window ID, showing 
 at the cost of a second executable to ship, WebKitGTK for users to install, and X11 only. A browser
 needs none of that, and works on Wayland.
 
+- **Bitwig** (6.1.7, at least) destroys the editor after 1 s if its parent gets no child window, so
+  the editor maps a blank X11 child there, through x11rb: an X error is then the plugin's to log,
+  where Xlib's default handler would exit the DAW. The host's window is X11 either way (XWayland on a
+  Wayland desktop; nih-plug offers no other on Linux). The child's connection is its own, to
+  `$DISPLAY` with `$XAUTHORITY`, as nih-plug's other editors open theirs: a host on another display
+  is assumed away, and with no X display there's no child and Bitwig closes the editor. [#158](https://github.com/jamesondh/chimera-vocal-synth/issues/158)
 - **Who can reach it:** the page's own files are public (they're the open-source site), but anything
   about the plugin needs the random token in the page's address, which the page keeps and sends as a
   header: a cookie would go to every service on 127.0.0.1, whatever its port. A request must also name
@@ -83,9 +89,14 @@ needs none of that, and works on Wayland.
   out, and after 3 s without an answer it says so and polls once a second until there is one. That also
   covers a host whose main thread is busy, on the other systems. The first request has no timeout, as
   nothing would try it again.
-- **Tested:** the token check by unit tests. In REAPER for Linux here, by hand: the plugin opened its
-  page, a click on Beatbox reached it, and closing the window stopped the server and the page said so.
-  The host test on CI renders on Linux, and doesn't drive the browser.
+- **Tested:** the token check by unit tests, and under Xvfb on CI, the X11 child: mapped, gone
+  with the editor, and a parent already gone an error rather than an exit. In REAPER for Linux here,
+  by hand: the plugin opened its page, a click on Beatbox reached it, and closing the window stopped
+  the server and the page said so.
+  In Bitwig 6.1.7 (demo, under Xvfb), CLAP and VST3: the server answered for 15 s with the child
+  and stopped at 1 s without it; closing and opening the window again worked. REAPER keeps an editor
+  with no child, so it never showed this. The host test on CI renders on Linux, and doesn't drive the
+  browser.
 
 ## Threads
 
@@ -181,14 +192,34 @@ the old syllable.
 
 ## MIDI
 
-Supported: notes, velocity (breath), pitch bend (±2 semitones), and all-notes-off / all-sound-off.
-Other controllers are ignored for now. Through clap-wrapper's VST3 layer a controller keeps only its
-last value per block, so bend moves in block-sized steps there; note timing isn't affected.
+Supported: notes, velocity (breath), pitch bend, channel and poly pressure, CC 74 (slide), and
+all-notes-off / all-sound-off. Other controllers are ignored. Expression follows the note sounding;
+after it ends, its channel's expression still moves the release.
+
+- **Pressure** raises the breath, up to 75% above the Breath dial at full pressure, never past the
+  dial's top. Poly pressure counts only on the sounding key.
+- **MPE** (host parameter, default on), lower zone only. Channel 1 is the master channel: its bend
+  is the wheel, ±2 semitones. Channels 2–16 are note channels: a note follows its own channel's
+  bend at ±48 semitones, and its slide moves the brightness up or down from the dial, counted from
+  where the finger landed. With MPE off, a bend on any channel is the ±2 wheel and slide does
+  nothing. Ableton Live sends MPE only with "Enable MPE Mode" on in the device's context menu.
+
+Pressure and brightness (the Breath and Bright dials included) glide to a new value with a 12 ms
+time constant, so a controller's steps aren't heard. Bend glides with the Glide dial.
+
+Through clap-wrapper's VST3 layer a controller keeps only its last value per block, so controllers
+move in block-sized steps there (the glides cover them), and a controller sent with a note arrives
+after it, by up to a block. So a slide in the 50 ms after its note starts counts as where the finger
+landed, in every format. A bend left on a channel by its last note can sound for up to a block at
+the next note's start. Note timing isn't affected.
+
+Not handled: the same pitch held on two channels is one key (the first note-off ends it), RPN 0 and
+6 (the note bend range is fixed at 48), the upper zone, CLAP note expressions.
 
 ## State
 
 Host parameters (automatable): output gain, vibrato depth and rate, breath, pressed, bright,
-breathy, rough, fry, glide, ring, restart lyrics. IDs are permanent once released.
+breathy, rough, fry, glide, ring, restart lyrics, MPE. IDs are permanent once released.
 
 Everything else is one `#[persist]` JSON field, `Settings`: lyrics, body, mode, posture (the
 articulators changed from neutral, and `tip_free`), voiced, the Play-mode pitch, the start syllable,
