@@ -208,19 +208,14 @@ fn the_elephant_dies_to_zero() {
 /// A call that takes a dial away from zero and lets it go again. The dial's smoothed value then
 /// came back toward zero for ever, and once it was small enough it stayed a denormal that every
 /// control step computed with: the elephant's `mode` after its squeak or its trumpet (19 and
-/// 20 s after letting go), the alligator's `hiss` after its hiss (27 s). The calls above never
+/// 20 s after letting go; the two take the same path, so only the trumpet is kept here), the
+/// alligator's `hiss` after its hiss (27 s). The calls above never
 /// showed it: each creature's first call leaves these dials where they rest. Watched for 40 s,
 /// so that a dial coming home a little slower would still be caught.
 #[cfg(target_arch = "x86_64")]
 #[test]
 fn the_elephant_dies_to_zero_after_its_trumpet() {
     assert_creature_dies_to_zero_when("elephant", Some("trumpet"), &[], 40);
-}
-
-#[cfg(target_arch = "x86_64")]
-#[test]
-fn the_elephant_dies_to_zero_after_its_squeak() {
-    assert_creature_dies_to_zero_when("elephant", Some("squeak"), &[], 40);
 }
 
 #[cfg(target_arch = "x86_64")]
@@ -236,4 +231,20 @@ fn the_alligator_dies_to_zero_after_its_hiss() {
 #[test]
 fn the_songbird_dies_to_zero_with_one_side_muted() {
     assert_creature_dies_to_zero_when("songbird", None, &[("voices", 0.0)], 30);
+}
+
+/// The flush is for a dial coming to rest at zero, and for no other. One sent to a value just
+/// above zero must still get there: flushed whatever its target, the elephant's `mode` set to
+/// 1e-29 took a first step of 4.35e-31, was zeroed, and stayed at 0 for ever.
+#[test]
+fn a_dial_sent_just_above_zero_still_arrives() {
+    use chimera::creatures::{CreatureVoice, creature_by_id};
+    let def = creature_by_id("elephant").expect("a creature");
+    let mode = def.param_index("mode").expect("the elephant's mode");
+    let mut v = CreatureVoice::new(def, FS, &[]);
+    v.set_params(&[(mode, 1e-29)]);
+    let mut buf = vec![0.0f32; FS as usize];
+    v.render(&mut buf);
+    let got = v.values()[mode];
+    assert!((got - 1e-29).abs() < 1e-31, "mode sent to 1e-29 is at {got:e} a second later");
 }

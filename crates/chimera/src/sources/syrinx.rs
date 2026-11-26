@@ -111,9 +111,12 @@ impl SyrinxLabia {
 
     /// Zero the gate's smoothing once it has decayed to nothing (control rate). A side that is
     /// muted comes to rest by a fixed fraction each sample and never arrives: without this it
-    /// ends a denormal, computed with at every sample from then on.
+    /// ends a denormal, computed with at every sample from then on. Only a gate that is shut:
+    /// one set just above zero must still get there.
     pub fn flush_tiny(&mut self) {
-        tiny(&mut self.gate_sm);
+        if self.gate == 0.0 {
+            tiny(&mut self.gate_sm);
+        }
     }
 
     /// Advance one sample; returns the valve opening 0..1.
